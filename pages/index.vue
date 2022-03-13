@@ -4,14 +4,14 @@
       <v-progress-circular indeterminate color="primary"></v-progress-circular>
     </v-overlay>
     <div class="route-list pa-2">
-      <h1>Az Országos Kéktúra útvonalváltozásai</h1>
-      <p>
+      <h1 class="text-h5 text-sm-h4">Az Országos Kéktúra útvonalváltozásai</h1>
+      <p class="text-body-2 text-sm-body-1">
         Ezen a honlapon összehasonlíthatod, hogy merre vezetett az Országos
         Kéktúra útvonala különböző, tetszőlegesen választott időpontokban.
       </p>
       <v-dialog v-model="dialog" width="500">
         <template v-slot:activator="{ on, attrs }">
-          <v-btn color="primary" outlined block v-bind="attrs" v-on="on">
+          <v-btn color="primary" outlined block small v-bind="attrs" v-on="on">
             További információk
           </v-btn>
         </template>
@@ -24,7 +24,8 @@
             alapján mutatja meg, hogy merre vezetett az Országos Kéktúra
             útvonala különböző időpontokban. Az útvonalat 2013-ban vitték fel
             először egyben az adatbázisba, ezért ekkori a legkorábbi dátum, amit
-            ki lehet választani.
+            ki lehet választani. Az útvonalak véletlenszerűen kiválasztott
+            színnel jelennek meg.
             <h4 class="mt-2">Ki csinálta?</h4>
             A honlapot Hann András készítette. Személyes honlapja a
             <a href="https://hann.io">hann.io</a> címen, míg túrázással
@@ -51,13 +52,13 @@
         </v-card>
       </v-dialog>
 
-      <v-divider class="my-6"> </v-divider>
+      <v-divider class="mt-4 mb-3"> </v-divider>
 
       <h3>Útvonalváltozatok</h3>
 
       <v-card v-for="(route, index) in routes" :key="index" class="my-2 pa-2">
         <v-row>
-          <v-col cols="4" sm="12" align="center">
+          <v-col cols="5" sm="12" align="center">
             <v-menu
               v-model="route.dateMenu"
               :close-on-content-click="false"
@@ -85,7 +86,7 @@
               ></v-date-picker>
             </v-menu>
           </v-col>
-          <v-col cols="8" sm="12">
+          <v-col cols="7" sm="12">
             <v-menu offset-y :close-on-content-click="false">
               <template v-slot:activator="{ on }">
                 <v-btn :color="route.color" v-on="on"> &nbsp; </v-btn>
@@ -136,6 +137,11 @@
             attribution="&copy; <a href='http://osm.org/copyright'>OpenStreetMap</a> contributors"
           >
           </l-tile-layer>
+          <l-control-scale
+            position="bottomleft"
+            :imperial="false"
+            :metric="true"
+          ></l-control-scale>
           <l-polyline
             v-for="(route, index) in routes"
             :key="index"
@@ -272,7 +278,7 @@ export default {
 @media only screen and (max-width: 650px) {
   .main {
     grid-template-columns: auto;
-    grid-template-rows: 40% auto;
+    grid-template-rows: 45% auto;
     grid-row-gap: 2px;
     grid-template-areas:
       'l'
