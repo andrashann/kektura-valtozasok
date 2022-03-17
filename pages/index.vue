@@ -10,7 +10,7 @@
         Kéktúra útvonala különböző, tetszőlegesen választott időpontokban.
       </p>
       <v-dialog v-model="dialog" width="500">
-        <template v-slot:activator="{ on, attrs }">
+        <template #activator="{ on, attrs }">
           <v-btn color="primary" outlined block small v-bind="attrs" v-on="on">
             További információk
           </v-btn>
@@ -55,68 +55,75 @@
       <v-divider class="mt-4 mb-3"> </v-divider>
 
       <h3>Útvonalváltozatok</h3>
-
-      <v-card v-for="(route, index) in routes" :key="index" class="my-2 pa-2">
-        <v-row>
-          <v-col cols="5" sm="12" align="center">
-            <v-menu
-              v-model="route.dateMenu"
-              :close-on-content-click="false"
-              :nudge-right="40"
-              transition="scale-transition"
-              offset-y
-              min-width="auto"
-            >
-              <template v-slot:activator="{ on, attrs }">
-                <v-text-field
-                  v-model="route.date"
-                  prepend-icon="mdi-calendar"
-                  readonly
-                  v-bind="attrs"
-                  v-on="on"
-                  hide-details="auto"
-                  class="pt-0"
-                ></v-text-field>
-              </template>
-              <v-date-picker
-                v-model="route.date"
-                @input="dateChanged(index)"
-                :min="dates[0]"
-                :max="today.toISOString().substring(0, 10)"
-              ></v-date-picker>
-            </v-menu>
-          </v-col>
-          <v-col cols="7" sm="12">
-            <v-menu offset-y :close-on-content-click="false">
-              <template v-slot:activator="{ on }">
-                <v-btn :color="route.color" v-on="on"> &nbsp; </v-btn>
-              </template>
-              <v-color-picker
-                :value="route.color"
-                v-model="route.color"
-                buttons
-                class="mx-auto"
+      <div v-if="processedQuery">
+        <v-card v-for="(route, index) in routes" :key="index" class="my-2 pa-2">
+          <v-row>
+            <v-col cols="5" sm="12" align="center">
+              <v-menu
+                v-model="route.dateMenu"
+                :close-on-content-click="false"
+                :nudge-right="40"
+                transition="scale-transition"
+                offset-y
+                min-width="auto"
               >
-              </v-color-picker>
-            </v-menu>
-            <v-btn :disabled="index == 0" @click="moveUp(index)">
-              <v-icon dark> mdi-arrow-up-bold-outline </v-icon>
-            </v-btn>
-            <v-btn
-              :disabled="index == routes.length - 1"
-              @click="moveDown(index)"
-            >
-              <v-icon dark> mdi-arrow-down-bold-outline </v-icon>
-            </v-btn>
-            <v-btn @click="routes.splice(index, 1)">
-              <v-icon dark> mdi-delete-outline </v-icon>
-            </v-btn>
-          </v-col>
-        </v-row>
-      </v-card>
-      <v-btn @click="newRoute" color="primary" block>
+                <template #activator="{ on, attrs }">
+                  <v-text-field
+                    v-model="route.date"
+                    prepend-icon="mdi-calendar"
+                    readonly
+                    v-bind="attrs"
+                    hide-details="auto"
+                    class="pt-0"
+                    v-on="on"
+                  ></v-text-field>
+                </template>
+                <v-date-picker
+                  v-model="route.date"
+                  :min="dates[0]"
+                  :max="today.toISOString().substring(0, 10)"
+                  @input="dateChanged(index)"
+                ></v-date-picker>
+              </v-menu>
+            </v-col>
+            <v-col cols="7" sm="12">
+              <v-menu offset-y :close-on-content-click="false">
+                <template #activator="{ on }">
+                  <v-btn :color="route.color" v-on="on"> &nbsp; </v-btn>
+                </template>
+                <v-color-picker
+                  v-model="route.color"
+                  :value="route.color"
+                  buttons
+                  class="mx-auto"
+                >
+                </v-color-picker>
+              </v-menu>
+              <v-btn :disabled="index == 0" @click="moveUp(index)">
+                <v-icon dark> mdi-arrow-up-bold-outline </v-icon>
+              </v-btn>
+              <v-btn
+                :disabled="index == routes.length - 1"
+                @click="moveDown(index)"
+              >
+                <v-icon dark> mdi-arrow-down-bold-outline </v-icon>
+              </v-btn>
+              <v-btn @click="routes.splice(index, 1)">
+                <v-icon dark> mdi-delete-outline </v-icon>
+              </v-btn>
+            </v-col>
+          </v-row>
+        </v-card>
+      </div>
+
+      <v-btn color="primary" block @click="newRoute">
         <v-icon dark> mdi-plus </v-icon> Hozzáadás
       </v-btn>
+      <p class="text-center text-body-2 mt-5">
+        <a :href="permalinkUrl"
+          >Permalink ezekhez a dátumokhoz, színekhez, térképkivágathoz
+        </a>
+      </p>
       <p class="text-center text-caption mt-5">
         Honlap: &copy; Hann András, 2022, GPL-3 licensz.
         <a href="https://github.com/andrashann/kektura-valtozasok"
@@ -131,7 +138,13 @@
 
     <div class="route-map">
       <client-only>
-        <l-map :zoom="7" :center="[47.4979, 19.0402]">
+        <l-map
+          ref="theMap"
+          :zoom="mapZoom"
+          :center="mapCenter"
+          @update:zoom="updateMapZoom($event)"
+          @update:center="updateMapCenter($event)"
+        >
           <l-tile-layer
             url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution="&copy; <a href='http://osm.org/copyright'>OpenStreetMap</a> contributors"
@@ -165,6 +178,11 @@ export default {
     return {
       dialog: false,
       today: new Date(),
+      mapZoom: 7,
+      currentMapZoom: 7,
+      mapCenter: [47.4979, 19.0402],
+      currentMapCenter: { lat: 47.4979, lng: 19.0402 },
+      processedQuery: false,
       routes: [
         {
           date: '2013-06-25',
@@ -181,7 +199,80 @@ export default {
       loading: true,
     }
   },
+  computed: {
+    permalinkUrl() {
+      return (
+        '?d=' +
+        this.routes.map((r) => r.date).join(',') +
+        '&c=' +
+        this.routes.map((r) => r.color.substring(1, 7)).join(',') +
+        '&o=' +
+        this.currentMapCenter.lat.toString().substring(0, 9) +
+        ',' +
+        this.currentMapCenter.lng.toString().substring(0, 9) +
+        '&z=' +
+        this.currentMapZoom
+      )
+    },
+  },
+  watch: {
+    mapCenter(newVal) {
+      this.$refs.theMap.mapObject.setView(newVal, this.mapZoom)
+    },
+  },
+  async created() {
+    this.routes[this.routes.length - 1].date = this.today
+      .toISOString()
+      .substring(0, 10)
+    const response = await fetch(
+      'https://storage.googleapis.com/storage/v1/b/kektura-history/o'
+    )
+    const bucketInfo = await response.json()
+    this.dates = bucketInfo.items.map((i) => i.name.substring(4, 14))
+    this.dates.sort()
+
+    if (this.$route.query.d) {
+      this.routes = []
+      for (const d of this.$route.query.d.split(',')) {
+        this.routes.push({
+          date: d,
+          color: '#' + Math.floor(Math.random() * 16777215).toString(16) + 'ff',
+          line: [[[0, 0]]],
+        })
+      }
+    }
+    if (this.$route.query.c) {
+      const splitColors = this.$route.query.c.split(',')
+      for (let i = 0; i < splitColors.length; i++) {
+        if (i < this.routes.length) {
+          this.routes[i].color = '#' + splitColors[i]
+        }
+      }
+    }
+    if (this.$route.query.z) {
+      this.mapZoom = Number(this.$route.query.z)
+    }
+    if (this.$route.query.o) {
+      const coords = this.$route.query.o.split(',').map((c) => Number(c))
+      this.mapCenter = coords
+    }
+
+    this.processedQuery = true
+
+    for (let i = 0; i < this.routes.length; i++) {
+      this.routes[i].line = this.geoJsonToLine(
+        await this.getGeoJSON(this.routes[i].date)
+      )
+    }
+    this.loading = false
+  },
   methods: {
+    updateMapZoom(e) {
+      this.currentMapZoom = e
+    },
+    updateMapCenter(e) {
+      this.currentMapCenter = e
+    },
     async newRoute() {
       this.loading = true
       this.routes.push({
@@ -241,25 +332,6 @@ export default {
         return geoJSON.features[0].geometry.coordinates.map((c) => c.reverse())
       }
     },
-  },
-
-  async created() {
-    this.routes[this.routes.length - 1].date = this.today
-      .toISOString()
-      .substring(0, 10)
-    const response = await fetch(
-      'https://storage.googleapis.com/storage/v1/b/kektura-history/o'
-    )
-    const bucketInfo = await response.json()
-    this.dates = bucketInfo.items.map((i) => i.name.substring(4, 14))
-    this.dates.sort()
-
-    for (let i = 0; i < this.routes.length; i++) {
-      this.routes[i].line = this.geoJsonToLine(
-        await this.getGeoJSON(this.routes[i].date)
-      )
-    }
-    this.loading = false
   },
 }
 </script>
